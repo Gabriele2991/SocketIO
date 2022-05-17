@@ -12,7 +12,7 @@ using Newtonsoft.Json.Linq;
 public class SocketManager : MonoBehaviour
 {
     public SocketIOUnity socket;
-
+    public SocketIOResponse response;
     public InputField EventNameTxt;
     public InputField DataTxt;
     public Text ReceivedText;  
@@ -23,7 +23,7 @@ public class SocketManager : MonoBehaviour
     private void Start()
     {
         //TODO: check the Uri if Valid.
-        var uri = new Uri("http://localhost:11100");
+        var uri = new Uri("http://localhost:8000");
         socket = new SocketIOUnity(uri, new SocketIOOptions
         {
             Query = new Dictionary<string, string>
@@ -48,7 +48,7 @@ public class SocketManager : MonoBehaviour
         };
         socket.OnPong += (sender, e) =>
         {
-            Debug.Log("Pong: " + e.TotalMilliseconds);
+            Debug.Log("Pong: ")/* + e.TotalMilliseconds)*/;
         };
         socket.OnDisconnected += (sender, e) =>
         {
@@ -56,7 +56,14 @@ public class SocketManager : MonoBehaviour
         };
         socket.OnReconnectAttempt += (sender, e) =>
         {
+            if (e >= 5){
+                Debug.Log("Socket disconnected");
+                socket.Disconnect();
+                socket.Dispose();
+                return;
+            }
             Debug.Log($"{DateTime.Now} Reconnecting: attempt = {e}");
+            
         };
         ////
 
@@ -73,24 +80,30 @@ public class SocketManager : MonoBehaviour
         {
             ReceivedText.text += "Received On " + name + " : " + response.GetValue().GetRawText() + "\n";
         });
-
-        LeaderBoard.current.OnLeaderboardShown(result=>
-        {
-            Debug.Log(result);
-        });
     }
     public void EmitTest()
     {
         string eventName = EventNameTxt.text.Trim().Length < 1 ? "hello" : EventNameTxt.text;
         string txt = DataTxt.text;
+        List<string> achi = new List<string>();
+        achi.Add("benvenuto");
 
-        LeaderBoard.current.OnLeaderboardShown(result =>
+        //PLAYER TRYOUT TO SEND ON BACKEND RUBAMAZZO
+        Player player = new Player("32341", "ascnasc", "everyone", true, null, "it", "it", "caccolajoe",achi,"7.9.8","vaffanculo");
+        
+        socket.EmitAsync("identify me", resFromServer =>
         {
-            socket.EmitAsync(eventName,response=> {
-                Debug.Log(response);//NEED TO IMPLEMENT IF THE ASK IS NOT TRUE
-            },result);
-            Debug.Log("Result in Emittest: " + result);
-        });
+            Debug.Log("RESPONSE FROM SERVER: "+resFromServer);
+        }, player);
+
+        
+        //LeaderBoard.current.OnLeaderboardShown(result =>
+        //{
+        //    socket.EmitAsync(eventName,response=> {
+        //        Debug.Log(response);//NEED TO IMPLEMENT IF THE ASK IS NOT TRUE
+        //    },result);
+        //    Debug.Log("Result in Emittest: " + result);
+        //});
         //if (!IsJSON(txt))
         //{
         //    socket.Emit(eventName, txt);
@@ -160,6 +173,36 @@ public class SocketManager : MonoBehaviour
     }
     //
 
+    [Serializable]
+    public class Player
+    {
+        public string guid;
+        public string shortId;
+        public string visibleOnline;
+        public bool isprem;
+        public string noAds;
+        public string language;
+        public string clientLang;
+        public string nick;
+        public List<string> achievements;
+        public string appversion;
+        public string deviceid;
+
+        public Player(string guid, string shortId, string visibleOnline, bool isprem, string noAds, string language, string clientLang, string nick, List<string> achievements, string appversion, string deviceid)
+        {
+            this.guid = guid;
+            this.shortId = shortId;
+            this.visibleOnline = visibleOnline;
+            this.isprem = isprem;
+            this.noAds = noAds;
+            this.language = language;
+            this.clientLang = clientLang;
+            this.nick = nick;
+            this.achievements = achievements;
+            this.appversion = appversion;
+            this.deviceid = deviceid;
+        }
+    }
 
     float rotateAngle = 45;
     readonly float MaxRotateAngle = 45;
